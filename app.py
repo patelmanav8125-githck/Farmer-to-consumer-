@@ -6,17 +6,48 @@ Powered by Agmarknet Daily Mandi Prices (data.gov.in)
 import os
 import sqlite3
 import random
+import shutil
 import requests
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "farmdirect.db")
+
+def resolve_db_path():
+    candidates = [
+        os.path.join(BASE_DIR, "farmdirect.db"),
+        os.path.join(os.path.dirname(BASE_DIR), "farmdirect.db"),
+        os.path.join(os.getcwd(), "farmdirect.db"),
+        os.path.join(os.getcwd(), "api", "farmdirect.db")
+    ]
+    source_db = None
+    for path in candidates:
+        if os.path.exists(path):
+            source_db = path
+            break
+
+    # On Vercel or read-only environments, copy DB to /tmp for writable SQLite access
+    if os.environ.get("VERCEL") or (source_db and not os.access(os.path.dirname(source_db), os.W_OK)):
+        tmp_db = "/tmp/farmdirect.db"
+        if source_db and not os.path.exists(tmp_db):
+            try:
+                shutil.copy2(source_db, tmp_db)
+            except Exception as e:
+                print(f"Notice: unable to copy DB to /tmp: {e}")
+        if os.path.exists(tmp_db):
+            return tmp_db
+
+    return source_db or os.path.join(BASE_DIR, "farmdirect.db")
+
+DB_PATH = resolve_db_path()
 
 app = Flask(__name__, static_folder=BASE_DIR, static_url_path="")
 CORS(app)
 
 def get_db_connection():
+    global DB_PATH
+    if not os.path.exists(DB_PATH):
+        DB_PATH = resolve_db_path()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
