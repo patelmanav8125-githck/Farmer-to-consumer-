@@ -1,9 +1,13 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#237a3b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FarmDirect">
+    <meta name="format-detection" content="telephone=no">
 
     <title>FarmDirect - Farmer to Consumer Portal</title>
 
@@ -19,23 +23,35 @@
 
 <header class="navbar">
 
-    <div class="logo">
+    <a href="#home" class="logo">
         🌾 <span>FarmDirect</span>
-    </div>
+    </a>
 
-    <nav>
-        <a href="#home">Home</a>
-        <a href="#market">Marketplace</a>
-        <a href="#forecast">Price Forecast</a>
-        <a href="#about">About</a>
+    <nav class="nav-menu" id="navMenu">
+        <a href="#home" class="nav-link">Home</a>
+        <a href="#market" class="nav-link">Marketplace</a>
+        <a href="#forecast" class="nav-link">Price Forecast</a>
+        <a href="#about" class="nav-link">About</a>
+        <div class="mobile-nav-footer">
+            <button class="nav-cta-btn mobile-sell-btn" id="mobileSellBtn">👨‍🌾 List Harvest</button>
+            <a href="#market" class="nav-cta-btn mobile-market-btn">🛒 Browse Market</a>
+        </div>
     </nav>
 
     <div class="nav-actions">
         <span class="open-badge">🔓 Open Access</span>
-        <a href="#market" class="nav-cta-btn">🛒 Browse Market</a>
+        <button class="nav-cta-btn header-sell-btn" id="headerSellBtn">👨‍🌾 Sell Harvest</button>
+        <a href="#market" class="nav-cta-btn desktop-market-btn">🛒 Market</a>
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle Navigation Menu" aria-expanded="false">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
     </div>
 
 </header>
+
+<div class="nav-backdrop" id="navBackdrop"></div>
 
 
 <!-- ================= HERO SECTION ================= -->
@@ -124,10 +140,11 @@
         <input
             type="text"
             id="searchInput"
-            placeholder="🔍 Search vegetables, fruits, grains, farmers..."
+            placeholder="🔍 Search crops, fruits, grains, farmers..."
+            autocomplete="off"
         >
 
-        <select id="categoryFilter">
+        <select id="categoryFilter" aria-label="Filter by Category">
             <option value="All">All Categories</option>
             <option value="Vegetables">Vegetables</option>
             <option value="Fruits">Fruits</option>
@@ -137,6 +154,15 @@
 
         <button id="searchBtn">Search</button>
 
+    </div>
+
+    <!-- Mobile-First Touch Category Chips -->
+    <div class="category-chips" id="categoryChips" role="tablist" aria-label="Filter by Category">
+        <button class="chip active" data-cat="All" role="tab" aria-selected="true">🌱 All</button>
+        <button class="chip" data-cat="Vegetables" role="tab" aria-selected="false">🥬 Vegetables</button>
+        <button class="chip" data-cat="Fruits" role="tab" aria-selected="false">🍎 Fruits</button>
+        <button class="chip" data-cat="Grains" role="tab" aria-selected="false">🌾 Grains</button>
+        <button class="chip" data-cat="Spices" role="tab" aria-selected="false">🌶️ Spices</button>
     </div>
 
 
@@ -597,6 +623,28 @@
 </footer>
 
 
+<!-- ================= MOBILE BOTTOM NAVIGATION ================= -->
+
+<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile Navigation">
+    <a href="#home" class="bottom-nav-item active" data-section="home">
+        <span class="b-icon">🏠</span>
+        <span class="b-label">Home</span>
+    </a>
+    <a href="#market" class="bottom-nav-item" data-section="market">
+        <span class="b-icon">🛒</span>
+        <span class="b-label">Market</span>
+    </a>
+    <a href="#forecast" class="bottom-nav-item" data-section="forecast">
+        <span class="b-icon">📊</span>
+        <span class="b-label">Forecast</span>
+    </a>
+    <button type="button" class="bottom-nav-item bottom-sell-btn" id="bottomSellBtn">
+        <span class="b-icon">👨‍🌾</span>
+        <span class="b-label">Sell</span>
+    </button>
+</nav>
+
+
 <!-- ================= MODAL: DIRECT PURCHASE (NO LOGIN REQUIRED) ================= -->
 
 <div class="modal-backdrop" id="buyModal">
@@ -846,9 +894,28 @@ function showToast(message, icon = '🎉') {
 
 
 // --- SEARCH & FILTER ---
+const categorySelect = document.getElementById('categoryFilter');
+const categoryChips = document.querySelectorAll('.category-chips .chip');
+
+function setCategoryFilter(cat) {
+    categorySelect.value = cat;
+    categoryChips.forEach(chip => {
+        const isMatch = chip.dataset.cat === cat;
+        chip.classList.toggle('active', isMatch);
+        chip.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+    });
+    filterProducts();
+}
+
+categoryChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+        setCategoryFilter(chip.dataset.cat);
+    });
+});
+
 function filterProducts() {
     const query = document.getElementById('searchInput').value.toLowerCase().trim();
-    const category = document.getElementById('categoryFilter').value;
+    const category = categorySelect.value;
     const cards = document.querySelectorAll('.product-card');
     let visibleCount = 0;
 
@@ -875,8 +942,61 @@ function filterProducts() {
 }
 
 document.getElementById('searchInput').addEventListener('input', filterProducts);
-document.getElementById('categoryFilter').addEventListener('change', filterProducts);
+categorySelect.addEventListener('change', () => {
+    setCategoryFilter(categorySelect.value);
+});
 document.getElementById('searchBtn').addEventListener('click', filterProducts);
+
+
+// --- MOBILE NAVBAR & DRAWER ---
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+const navMenu = document.getElementById('navMenu');
+const navBackdrop = document.getElementById('navBackdrop');
+
+function toggleMobileNav(forceClose = false) {
+    const isOpen = forceClose ? false : !navMenu.classList.contains('open');
+    navMenu.classList.toggle('open', isOpen);
+    hamburgerBtn.classList.toggle('open', isOpen);
+    hamburgerBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    navBackdrop.classList.toggle('active', isOpen);
+    document.body.classList.toggle('menu-locked', isOpen);
+}
+
+if (hamburgerBtn) {
+    hamburgerBtn.addEventListener('click', () => toggleMobileNav());
+}
+
+if (navBackdrop) {
+    navBackdrop.addEventListener('click', () => toggleMobileNav(true));
+}
+
+document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => toggleMobileNav(true));
+});
+
+
+// --- MOBILE BOTTOM NAVIGATION ACTIVE TRACKING ---
+const bottomNavItems = document.querySelectorAll('.bottom-nav-item[data-section]');
+const trackedSections = document.querySelectorAll('section[id], footer[id]');
+
+function updateActiveBottomNav() {
+    let currentId = 'home';
+    const scrollPos = window.scrollY + 200;
+
+    trackedSections.forEach(section => {
+        const top = section.offsetTop;
+        const height = section.offsetHeight;
+        if (scrollPos >= top && scrollPos < top + height) {
+            currentId = section.getAttribute('id');
+        }
+    });
+
+    bottomNavItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.section === currentId);
+    });
+}
+
+window.addEventListener('scroll', updateActiveBottomNav, { passive: true });
 
 
 // --- DIRECT PURCHASE MODAL (OPEN TO ALL) ---
@@ -969,10 +1089,20 @@ document.getElementById('directOrderForm').addEventListener('submit', async (e) 
 
 // --- FARMER LISTING MODAL (OPEN TO ALL) ---
 const farmerModal = document.getElementById('farmerModal');
-const joinFarmerBtn = document.getElementById('joinFarmerBtn');
 const closeFarmerModal = document.getElementById('closeFarmerModal');
 
-joinFarmerBtn.addEventListener('click', () => farmerModal.classList.add('active'));
+function openFarmerModal() {
+    toggleMobileNav(true);
+    farmerModal.classList.add('active');
+}
+
+['joinFarmerBtn', 'headerSellBtn', 'mobileSellBtn', 'bottomSellBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('click', openFarmerModal);
+    }
+});
+
 closeFarmerModal.addEventListener('click', () => farmerModal.classList.remove('active'));
 farmerModal.addEventListener('click', (e) => {
     if (e.target === farmerModal) farmerModal.classList.remove('active');
@@ -1069,4 +1199,3 @@ window.addEventListener('keydown', (e) => {
 
 </body>
 </html>
-```
